@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">BLE_Example</string>
     <string name="scan_str">SCAN</string>
+    <string name="ble_name">Name: </string>
+    <string name="ble_address">Address: </string>
+    <string name="ble_type">Type: </string>
 </resources>

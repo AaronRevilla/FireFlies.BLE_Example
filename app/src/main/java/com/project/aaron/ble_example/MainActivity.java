@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView mRecyclerView;
     private BleAdapter mAdapter;
     private ProgressBar mProgressBar;
+    private boolean isScanning = false;
 
 
     private static final long SCAN_PERIOD = 10 * 1000;
@@ -51,10 +52,38 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothScanner;
     private BluetoothManager mBluetoothManager;
-    private ScanCallback mScanCallBack;
     private List<BluetoothDevice> deviceList;
+    private ScanCallback mScanCallBack = new ScanCallback() {
+            @Override
+            public void onScanResult(int callbackType, ScanResult result) {
+                super.onScanResult(callbackType, result);
+                Log.d(TAG, "onScanResult: " + result.toString());
+                BluetoothDevice device = result.getDevice();
+                deviceList.add( device);
+                mAdapter.notifyItemInserted(deviceList.size()-1);
+            }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+            @Override
+            public void onBatchScanResults(List<ScanResult> results) {
+                super.onBatchScanResults(results);
+                Log.d(TAG, "onBatchScanResults: " + results.toString());
+            }
+
+            @Override
+            public void onScanFailed(int errorCode) {
+                super.onScanFailed(errorCode);
+                Log.d(TAG, "onScanFailed: " + errorCode);
+            }
+        };
+
+    private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {
+        @Override
+        public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
+            Log.d(TAG, "onLeScan: " + device.getName() + " " + device.getAddress() + " rssi " + rssi );
+        }
+    };
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,29 +117,7 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = mBluetoothManager.getAdapter();
         mBluetoothScanner = mBluetoothAdapter.getBluetoothLeScanner();
-
-        //Create Scanner
-        mScanCallBack = new ScanCallback() {
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) {
-                super.onScanResult(callbackType, result);
-                Log.d(TAG, "onScanResult: " + result.toString());
-                BluetoothDevice device = result.getDevice();
-                deviceList.add( device);
-            }
-
-            @Override
-            public void onBatchScanResults(List<ScanResult> results) {
-                super.onBatchScanResults(results);
-                Log.d(TAG, "onBatchScanResults: " + results.toString());
-            }
-
-            @Override
-            public void onScanFailed(int errorCode) {
-                super.onScanFailed(errorCode);
-                Log.d(TAG, "onScanFailed: " + errorCode);
-            }
-        };
+//
 
         //Verify if bluetooth is enable
         if(mBluetoothAdapter != null || !mBluetoothAdapter.isEnabled()){
@@ -118,25 +125,29 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult( enableBluetoothIntent, REQUEST_ENABLE_BT);
         }
 
+
+
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void scanDevices(final boolean enable){
-        if(enable){
+
+    private void scanDevices(){
+        if(!isScanning){
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     mProgressBar.setVisibility(View.INVISIBLE);
+                    Log.d(TAG, "run: StopScanning");
                     mBluetoothScanner.stopScan(mScanCallBack);
+                    isScanning = false;
                 }
             }, SCAN_PERIOD);
+
             mProgressBar.setVisibility(View.VISIBLE);
+            Log.d(TAG, "scanDevices: Start Scanning");
+            isScanning = true;
             mBluetoothScanner.startScan(mScanCallBack);
         }
         else{
-            if(mProgressBar.getVisibility() == View.VISIBLE){
-                mProgressBar.setVisibility(View.INVISIBLE);
-            }
             mBluetoothScanner.stopScan(mScanCallBack);
         }
     }
@@ -150,11 +161,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void scanDevices(View view) {
 
+
+    public void refresh(View view) {
+        scanDevices();
     }
-
-
-
-
 }
